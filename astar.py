@@ -40,7 +40,7 @@ class Problem:
         return 0
 
 
-def search(problem):
+def search(problem, callback=None, callback_freq=1_000):
     node = Node(problem.initial_state(), 0, None, None)
     frontier = IndexedQueue()
     frontier.add_or_update(0, node)
@@ -48,8 +48,19 @@ def search(problem):
     action_count = 0
 
     final_node = None
+    iteration = 0
     while not frontier.empty():
+        iteration += 1
         (priority, node) = frontier.pop()
+
+        if (callback and iteration % callback_freq == 0):
+            callback({
+                "cost": priority,
+                "uniform_cost": node.path_cost,
+                "state": node.state,
+                "explored_nodes": len(explored),
+                "action_count": action_count
+            })
 
         if problem.goal_test(node.state):
             final_node = node

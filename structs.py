@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import OrderedDict
 
 
 @dataclass(eq=True, frozen=True)
@@ -30,6 +31,10 @@ class Vector:
         return Vector(one.x+two.x, one.y+two.y, one.z+two.z)
     def __mul__(self, scalar):
         return Vector(self.x*scalar, self.y*scalar, self.z*scalar)
+    def __eq__(self, o):
+        return self.x == o.x and self.y == o.y and self.z == o.z
+    def __hash__(self):
+        return hash((self.x, self.y, self.z))
 
     def __str__(self) -> str:
         return f'[{self.x}, {self.y}, {self.z}]'
@@ -60,6 +65,7 @@ class Block:
         self.solved_location = solved_location
         self.actual_location = actual_location or solved_location.copy()
         self.orientations = orientations or Block.initial_orientations
+        self._hash = None
     
     def apply(self, action):
         if action.applies(self):
@@ -71,11 +77,21 @@ class Block:
     
     def solved(self):
         return self.solved_location == self.actual_location and self.orientations == Block.initial_orientations
+    
+    def turn_distance(self):
+        # TODO not accurate
+        return self.solved_location.x != self.actual_location.x + self.solved_location.y != self.actual_location.y + self.solved_location.z != self.actual_location.z
 
     def __str__(self) -> str:
         return f'(L=[{self.actual_location.x}, {self.actual_location.y}, {self.actual_location.z}], O=[{self.orientation.x}, {self.orientation.y}, {self.orientation.z}])'
     def __repr__(self) -> str:
         return self.__str__()
+    def __eq__(self, other):
+        return self.actual_location == other.actual_location and self.orientations == other.orientations # and self.solved_location == other.solved_location 
+    def __hash__(self): 
+        if not self._hash:
+            self._hash = hash((self.solved_location, self.actual_location, self.orientations))
+        return self._hash
 
 class Cube:
     def __init__(self, size, blocks=None):
@@ -92,6 +108,7 @@ class Cube:
                             self.blocks.append(Block(Vector(i,j,k)))
         else:
             self.blocks = blocks
+        self._hash = None
 
     def apply(self, action):
        blocks = [b.apply(action) for b in self.blocks] 
@@ -99,6 +116,16 @@ class Cube:
     
     def solved(self):
         return all((b.solved() for b in self.blocks))
+
+    def turn_distance(self):
+        return sum((b.turn_distance() for b in self.blocks)) 
+    
+    def __eq__(self, other):
+        return self.blocks == other.blocks
+    def __hash__(self): 
+        if not self._hash:
+            self._hash = hash((hash(b) for b in self.blocks))
+        return self._hash
 
 
 class Action:

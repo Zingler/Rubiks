@@ -53,5 +53,8 @@ def render(cube):
     plt.draw()
     plt.pause(.2)
 
+def pause(x):
+    plt.pause(x)
+
 
 

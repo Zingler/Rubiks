@@ -14,11 +14,12 @@ class CubeProblem(Problem):
     def apply_action(self, state, action):
         return state.apply(action), 1
     def heuristic(self, state):
-        return 0
+        return 0 
 
 
 if __name__ == "__main__":
     from plotter import render
+    from plotter import pause
     from time import sleep
     from random import randrange
     from astar import search
@@ -31,8 +32,12 @@ if __name__ == "__main__":
 
     render(cube)
 
+    # import cProfile
+    # with cProfile.Profile() as pr:
     p = CubeProblem(cube)
-    states, actions = search(p)
+    states, actions = search(p, callback=print, callback_freq=100)
+    # pr.print_stats()
+
 
     print(f'Solved in {len(actions)-1} turns')
 
@@ -42,5 +47,5 @@ if __name__ == "__main__":
         for action in actions[1:]:
             current = current.apply(action)
             render(current)
-        sleep(4)
+        pause(4)
 
