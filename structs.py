@@ -44,10 +44,18 @@ class Matrix:
         return Matrix(v1,v2,v1.cross(v2))
 
 class Block:
-    def __init__(self, solved_location):
+    def __init__(self, solved_location, actual_location=None, orientations=None):
         self.solved_location = solved_location
-        self.actual_location = solved_location.copy()
-        self.orientations = [Vector(0,0,1), Vector(1,0,0)]
+        self.actual_location = actual_location or solved_location.copy()
+        self.orientations = orientations or [Vector(0,0,1), Vector(1,0,0)]
+    
+    def apply(self, action):
+        if action.applies(self):
+            actual_location = action.transform.__call__(self.actual_location)
+            orientations = [action.transform.__call__(o) for o in self.orientations]
+            return Block(self.solved_location, actual_location, orientations)
+        else:
+            return self
 
     def __str__(self) -> str:
         return f'(L=[{self.actual_location.x}, {self.actual_location.y}, {self.actual_location.z}], O=[{self.orientation.x}, {self.orientation.y}, {self.orientation.z}])'
@@ -55,32 +63,30 @@ class Block:
         return self.__str__()
 
 class Cube:
-    def __init__(self, size):
+    def __init__(self, size, blocks=None):
         self.size = size
-        self.blocks = []
-        even = size % 2 == 0
-        half = int(size / 2)
-        for i in range(-half, half+1):
-            for j in range(-half, half+1):
-                for k in range(-half, half+1):
-                    interior = all([abs(x) != half for x in (i,j,k)])
-                    if not (even and i*j*k == 0) and not interior:
-                        self.blocks.append(Block(Vector(i,j,k)))
+        if blocks == None:
+            self.blocks = []
+            even = size % 2 == 0
+            half = int(size / 2)
+            for i in range(-half, half+1):
+                for j in range(-half, half+1):
+                    for k in range(-half, half+1):
+                        interior = all([abs(x) != half for x in (i,j,k)])
+                        if not (even and i*j*k == 0) and not interior:
+                            self.blocks.append(Block(Vector(i,j,k)))
+        else:
+            self.blocks = blocks
+
+    def apply(self, action):
+       blocks = [b.apply(action) for b in self.blocks] 
+       return Cube(self.size, blocks=blocks)
 
 
 class Action:
     def __init__(self, applies, transform):
         self.applies = applies
         self.transform = transform
-    
-    def apply_to_block(self, block):
-        if self.applies(block):
-            block.actual_location = self.transform.__call__(block.actual_location)
-            block.orientations = [self.transform.__call__(o) for o in block.orientations]
-
-    def apply(self, cube):
-        for block in cube.blocks:
-            self.apply_to_block(block)
 
 ACTIONS = [
     Action(lambda b: b.actual_location.x == 1, Vector.rotateX),
@@ -90,3 +96,22 @@ ACTIONS = [
     Action(lambda b: b.actual_location.z == 1, Vector.rotateZ),
     Action(lambda b: b.actual_location.z == -1, Vector.rotateZ),
 ]
+
+
+if __name__ == "__main__":
+    # Performance testing
+
+    import random
+    import timeit
+
+    iterations = 40_000
+    cube = Cube(3)
+
+    start = timeit.default_timer()
+
+    for i in range(iterations):
+        ai = random.randrange(len(ACTIONS))
+        cube = cube.apply(ACTIONS[ai])
+    
+    end = timeit.default_timer()
+    print(f'Actions per second {iterations/(end-start)}')
