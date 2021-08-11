@@ -1,8 +1,11 @@
+from dataclasses import dataclass
+
+
+@dataclass(eq=True, frozen=True)
 class Vector:
-    def __init__(self, x, y, z):
-        self.x = x
-        self.y = y
-        self.z = z
+    x: int
+    y: int
+    z: int
     
     def rotateX(self):
         return Vector(self.x, self.z, -self.y)
@@ -10,6 +13,13 @@ class Vector:
         return Vector(self.z, self.y, -self.x)
     def rotateZ(self):
         return Vector(-self.y, self.x, self.z)
+
+    def rrotateX(self):
+        return Vector(self.x, -self.z, self.y)
+    def rrotateY(self):
+        return Vector(-self.z, self.y, self.x)
+    def rrotateZ(self):
+        return Vector(self.y, -self.x, self.z)
 
     def cross(self, o):
         return Vector(self.y*o.z - o.y*self.z, o.x*self.z - self.x*o.z, self.x*o.y - self.y*o.x)
@@ -44,10 +54,12 @@ class Matrix:
         return Matrix(v1,v2,v1.cross(v2))
 
 class Block:
+    initial_orientations = [Vector(0,0,1), Vector(1,0,0)]
+
     def __init__(self, solved_location, actual_location=None, orientations=None):
         self.solved_location = solved_location
         self.actual_location = actual_location or solved_location.copy()
-        self.orientations = orientations or [Vector(0,0,1), Vector(1,0,0)]
+        self.orientations = orientations or Block.initial_orientations
     
     def apply(self, action):
         if action.applies(self):
@@ -56,6 +68,9 @@ class Block:
             return Block(self.solved_location, actual_location, orientations)
         else:
             return self
+    
+    def solved(self):
+        return self.solved_location == self.actual_location and self.orientations == Block.initial_orientations
 
     def __str__(self) -> str:
         return f'(L=[{self.actual_location.x}, {self.actual_location.y}, {self.actual_location.z}], O=[{self.orientation.x}, {self.orientation.y}, {self.orientation.z}])'
@@ -81,6 +96,9 @@ class Cube:
     def apply(self, action):
        blocks = [b.apply(action) for b in self.blocks] 
        return Cube(self.size, blocks=blocks)
+    
+    def solved(self):
+        return all((b.solved() for b in self.blocks))
 
 
 class Action:
@@ -95,6 +113,12 @@ ACTIONS = [
     Action(lambda b: b.actual_location.y == -1, Vector.rotateY),
     Action(lambda b: b.actual_location.z == 1, Vector.rotateZ),
     Action(lambda b: b.actual_location.z == -1, Vector.rotateZ),
+    Action(lambda b: b.actual_location.x == 1, Vector.rrotateX),
+    Action(lambda b: b.actual_location.x == -1, Vector.rrotateX),
+    Action(lambda b: b.actual_location.y == 1, Vector.rrotateY),
+    Action(lambda b: b.actual_location.y == -1, Vector.rrotateY),
+    Action(lambda b: b.actual_location.z == 1, Vector.rrotateZ),
+    Action(lambda b: b.actual_location.z == -1, Vector.rrotateZ),
 ]
 
 

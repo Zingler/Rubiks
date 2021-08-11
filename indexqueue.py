@@ -94,16 +94,16 @@ class IndexedQueue:
         if left == None and right == None:
             return
         elif right == None:
-            if left < parent:
+            if left[0] < parent[0]:
                 self._swap(index, left_i)
                 self._siftdown(left_i)
         else:
-            if left < right:
-                if left < parent:
+            if left[0] < right[0]:
+                if left[0] < parent[0]:
                     self._swap(index, left_i)
                     self._siftdown(left_i)
             else:
-                if right < parent:
+                if right[0] < parent[0]:
                     self._swap(index, right_i)
                     self._siftdown(right_i)
 
