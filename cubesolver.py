@@ -14,7 +14,7 @@ class CubeProblem(Problem):
     def apply_action(self, state, action):
         return state.apply(action), 1
     def heuristic(self, state):
-        return 0 
+        return state.turn_distance() / 8
 
 
 if __name__ == "__main__":
@@ -25,17 +25,46 @@ if __name__ == "__main__":
     from astar import search
 
     cube = Cube(3)
-    turns = 3
+    def top(block: Block):
+        l = block.solved_location
+        x = l.x
+        y = l.y
+        z = l.z
+        return z == 1
+    def edge(block: Block):
+        l = block.solved_location
+        x = l.x
+        y = l.y
+        z = l.z
+        return (x == 0) ^ (y == 0) ^ (z == 0)
+    def corner(block: Block):
+        l = block.solved_location
+        x = l.x
+        y = l.y
+        z = l.z
+        return (x != 0) and (y != 0) and (z != 0)
+    def center(block: Block):
+        l = block.solved_location
+        x = l.x
+        y = l.y
+        z = l.z
+        return ((x == 0) + (y == 0) + (z == 0)) == 2
+    cube = cube.sub_cube(lambda b: corner(b) and not center(b))
+    turns = 6
 
     for i in range(turns):
         cube = cube.apply(random.choice(ACTIONS))
 
     render(cube)
 
+    def callback(status):
+        print(status)
+        render(status["state"])    
+
     # import cProfile
     # with cProfile.Profile() as pr:
     p = CubeProblem(cube)
-    states, actions = search(p, callback=print, callback_freq=100)
+    states, actions = search(p, callback=callback, callback_freq=10)
     # pr.print_stats()
 
 

@@ -35,7 +35,7 @@ def block_to_3dcollection(block, size) :
     if size % 2 == 0:
         verts = [[condense(p) for p in v] for v in verts]
     c = Poly3DCollection(verts, closed=True)
-    c.set_facecolor(["Red", "White", "Orange", "Yellow", "Green", "Blue"])
+    c.set_facecolor(["Blue", "Yellow", "Orange", "White", "Green", "Red"])
     return c
 
 def render(cube):

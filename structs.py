@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import InitVar, dataclass
 from typing import OrderedDict
 
 
@@ -59,7 +59,7 @@ class Matrix:
         return Matrix(v1,v2,v1.cross(v2))
 
 class Block:
-    initial_orientations = [Vector(0,0,1), Vector(1,0,0)]
+    initial_orientations = [Vector(1,0,0), Vector(0,1,0)]
 
     def __init__(self, solved_location, actual_location=None, orientations=None):
         self.solved_location = solved_location
@@ -78,9 +78,20 @@ class Block:
     def solved(self):
         return self.solved_location == self.actual_location and self.orientations == Block.initial_orientations
     
+    def is_corner(self):
+        l = self.solved_location
+        return l.x != 0 and l.y != 0 and l.z != 0
+
     def turn_distance(self):
-        # TODO not accurate
-        return self.solved_location.x != self.actual_location.x + self.solved_location.y != self.actual_location.y + self.solved_location.z != self.actual_location.z
+        right_location = self.solved_location == self.actual_location 
+        right_o = (self.orientations == Block.initial_orientations)
+        if right_location and right_o:
+            return 0
+        if right_location and not right_o:
+            return 3
+        if self.is_corner():
+           return (self.solved_location.x != self.actual_location.x) + (self.solved_location.y != self.actual_location.y) + (self.solved_location.z != self.actual_location.z)
+        return 1
 
     def __str__(self) -> str:
         return f'(L=[{self.actual_location.x}, {self.actual_location.y}, {self.actual_location.z}], O=[{self.orientation.x}, {self.orientation.y}, {self.orientation.z}])'
@@ -114,6 +125,14 @@ class Cube:
        blocks = [b.apply(action) for b in self.blocks] 
        return Cube(self.size, blocks=blocks)
     
+    def sub_cube(self, block_selector):
+        blocks = []
+        for b in self.blocks:
+            if block_selector(b):
+                blocks.append(b)
+        return Cube(self.size, blocks)
+
+    
     def solved(self):
         return all((b.solved() for b in self.blocks))
 
@@ -123,6 +142,7 @@ class Cube:
     def __eq__(self, other):
         return self.blocks == other.blocks
     def __hash__(self): 
+        return super().__hash__()
         if not self._hash:
             self._hash = hash((hash(b) for b in self.blocks))
         return self._hash
