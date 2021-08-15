@@ -18,11 +18,12 @@ class CubeProblem(Problem):
 
 
 if __name__ == "__main__":
-    from plotter import render
-    from plotter import pause
+    from plotter import start_plotter
     from time import sleep
     from random import randrange
     from astar import search
+
+    render = start_plotter()
 
     cube = Cube(3)
     def top(block: Block):
@@ -76,5 +77,6 @@ if __name__ == "__main__":
         for action in actions[1:]:
             current = current.apply(action)
             render(current)
-        pause(4)
+            sleep(1)
+        sleep(4)
 

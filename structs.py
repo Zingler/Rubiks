@@ -76,11 +76,15 @@ class Block:
             return self
     
     def solved(self):
-        return self.solved_location == self.actual_location and self.orientations == Block.initial_orientations
+        return self.solved_location == self.actual_location and (self.orientations == Block.initial_orientations or self.is_center())
     
     def is_corner(self):
         l = self.solved_location
         return l.x != 0 and l.y != 0 and l.z != 0
+
+    def is_center(self):
+        l = self.solved_location
+        return (l.x == 0) + (l.y == 0) + (l.z == 0) == 2
 
     def turn_distance(self):
         right_location = self.solved_location == self.actual_location 
@@ -101,7 +105,7 @@ class Block:
         return self.actual_location == other.actual_location and self.orientations == other.orientations # and self.solved_location == other.solved_location 
     def __hash__(self): 
         if not self._hash:
-            self._hash = hash((self.solved_location, self.actual_location, self.orientations))
+            self._hash = hash((self.solved_location, self.actual_location, self.orientations[0], self.orientations[1]))
         return self._hash
 
 class Cube:
@@ -142,9 +146,9 @@ class Cube:
     def __eq__(self, other):
         return self.blocks == other.blocks
     def __hash__(self): 
-        return super().__hash__()
+        # return super().__hash__()
         if not self._hash:
-            self._hash = hash((hash(b) for b in self.blocks))
+            self._hash = hash(tuple([hash(b) for b in self.blocks]))
         return self._hash
 
 

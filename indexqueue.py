@@ -77,7 +77,7 @@ class IndexedQueue:
 
         if o[0] < p[0]:
             self._swap(index, p_i)
-        self._siftup(p_i)
+            self._siftup(p_i)
 
     def _siftdown(self, index):
         left_i = IndexedQueue.left(index)
