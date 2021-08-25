@@ -14,6 +14,12 @@ class Vector:
         return Vector(self.z, self.y, -self.x)
     def rotateZ(self):
         return Vector(-self.y, self.x, self.z)
+    def halfX(self):
+        return Vector(self.x, -self.y, -self.z)
+    def halfY(self):
+        return Vector(-self.x, self.y, -self.z)
+    def halfZ(self):
+        return Vector(-self.x, -self.y, self.z)
 
     def rrotateX(self):
         return Vector(self.x, -self.z, self.y)
@@ -153,24 +159,50 @@ class Cube:
 
 
 class Action:
-    def __init__(self, applies, transform):
+    _id_generator = 0
+
+    def __init__(self, applies, transform, inverse=None):
         self.applies = applies
         self.transform = transform
+        if isinstance(inverse, Action):
+            self.inverse = inverse
+        elif inverse is None:
+            self.inverse = self
+        else:
+            self.inverse = Action(applies, inverse, self)
+    
+    def id(self):
+        if not hasattr(self,'_id'):
+            Action._id_generator += 1
+            self._id = Action._id_generator
+        return self._id
+    
+    def __hash__(self) -> int:
+        return self.id()
 
-ACTIONS = [
-    Action(lambda b: b.actual_location.x == 1, Vector.rotateX),
-    Action(lambda b: b.actual_location.x == -1, Vector.rotateX),
-    Action(lambda b: b.actual_location.y == 1, Vector.rotateY),
-    Action(lambda b: b.actual_location.y == -1, Vector.rotateY),
-    Action(lambda b: b.actual_location.z == 1, Vector.rotateZ),
-    Action(lambda b: b.actual_location.z == -1, Vector.rotateZ),
-    Action(lambda b: b.actual_location.x == 1, Vector.rrotateX),
-    Action(lambda b: b.actual_location.x == -1, Vector.rrotateX),
-    Action(lambda b: b.actual_location.y == 1, Vector.rrotateY),
-    Action(lambda b: b.actual_location.y == -1, Vector.rrotateY),
-    Action(lambda b: b.actual_location.z == 1, Vector.rrotateZ),
-    Action(lambda b: b.actual_location.z == -1, Vector.rrotateZ),
+    def __eq__(self, other) -> bool:
+        return self.id() == other.id()
+
+
+QUARTER_FACE = [
+    Action(lambda b: b.actual_location.x == 1, Vector.rotateX, Vector.rrotateX),
+    Action(lambda b: b.actual_location.x == -1, Vector.rotateX, Vector.rrotateX),
+    Action(lambda b: b.actual_location.y == 1, Vector.rotateY, Vector.rrotateY),
+    Action(lambda b: b.actual_location.y == -1, Vector.rotateY, Vector.rrotateY),
+    Action(lambda b: b.actual_location.z == 1, Vector.rotateZ, Vector.rrotateZ),
+    Action(lambda b: b.actual_location.z == -1, Vector.rotateZ, Vector.rrotateZ),
 ]
+
+HALF_FACE = [
+    Action(lambda b: b.actual_location.x == 1, Vector.halfX),
+    Action(lambda b: b.actual_location.x == -1, Vector.halfX),
+    Action(lambda b: b.actual_location.y == 1, Vector.halfY),
+    Action(lambda b: b.actual_location.y == -1, Vector.halfY),
+    Action(lambda b: b.actual_location.z == 1, Vector.halfZ),
+    Action(lambda b: b.actual_location.z == -1, Vector.halfZ)
+]
+
+ACTIONS = QUARTER_FACE + list(map(lambda a: a.inverse, QUARTER_FACE)) + HALF_FACE
 
 
 if __name__ == "__main__":

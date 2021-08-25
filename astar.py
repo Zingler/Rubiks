@@ -27,7 +27,7 @@ class Problem:
         pass
     def goal_test(self, state):
         return False
-    def actions(self, state):
+    def actions(self, node):
         return []
     def child(self, node, action) -> Node:
         state, path_cost = self.apply_action(node.state, action)
@@ -67,7 +67,7 @@ def search(problem, callback=None, callback_freq=1_000):
             break
         explored.add(node)
 
-        for action in problem.actions(node.state):
+        for action in problem.actions(node):
             child = problem.child(node, action)
             action_count += 1
             if not child in explored:

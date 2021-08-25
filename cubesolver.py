@@ -9,8 +9,12 @@ class CubeProblem(Problem):
         return self._initial_state
     def goal_test(self, state):
         return state.solved()
-    def actions(self, state):
-        return ACTIONS
+    def actions(self, node):
+        copy = ACTIONS[:]
+        action = node.action
+        if action:
+            copy.remove(node.action.inverse)
+        return copy
     def apply_action(self, state, action):
         return state.apply(action), 1
     def heuristic(self, state):
