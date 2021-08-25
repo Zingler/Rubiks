@@ -54,8 +54,8 @@ if __name__ == "__main__":
         y = l.y
         z = l.z
         return ((x == 0) + (y == 0) + (z == 0)) == 2
-    cube = cube.sub_cube(lambda b: corner(b) and not center(b))
-    turns = 6
+    cube = cube.sub_cube(lambda b: True) 
+    turns = 30
 
     for i in range(turns):
         cube = cube.apply(random.choice(ACTIONS))

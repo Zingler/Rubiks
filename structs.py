@@ -183,7 +183,6 @@ class Action:
     def __eq__(self, other) -> bool:
         return self.id() == other.id()
 
-
 QUARTER_FACE = [
     Action(lambda b: b.actual_location.x == 1, Vector.rotateX, Vector.rrotateX),
     Action(lambda b: b.actual_location.x == -1, Vector.rotateX, Vector.rrotateX),
@@ -192,6 +191,7 @@ QUARTER_FACE = [
     Action(lambda b: b.actual_location.z == 1, Vector.rotateZ, Vector.rrotateZ),
     Action(lambda b: b.actual_location.z == -1, Vector.rotateZ, Vector.rrotateZ),
 ]
+QUARTER_FACE = QUARTER_FACE + list(map(lambda a: a.inverse, QUARTER_FACE))
 
 HALF_FACE = [
     Action(lambda b: b.actual_location.x == 1, Vector.halfX),
@@ -202,7 +202,20 @@ HALF_FACE = [
     Action(lambda b: b.actual_location.z == -1, Vector.halfZ)
 ]
 
-ACTIONS = QUARTER_FACE + list(map(lambda a: a.inverse, QUARTER_FACE)) + HALF_FACE
+QUARTER_SLICE = [
+    Action(lambda b: abs(b.actual_location.x) == 1, Vector.rotateX, Vector.rrotateX),
+    Action(lambda b: abs(b.actual_location.y) == 1, Vector.rotateY, Vector.rrotateY),
+    Action(lambda b: abs(b.actual_location.z) == 1, Vector.rotateZ, Vector.rrotateZ),
+]
+QUARTER_SLICE = QUARTER_SLICE + list(map(lambda a: a.inverse, QUARTER_SLICE))
+
+HALF_SLICE = [
+    Action(lambda b: abs(b.actual_location.x) == 1, Vector.halfX),
+    Action(lambda b: abs(b.actual_location.y) == 1, Vector.halfY),
+    Action(lambda b: abs(b.actual_location.z) == 1, Vector.halfZ),
+]
+
+ACTIONS = QUARTER_FACE + HALF_FACE
 
 
 if __name__ == "__main__":
