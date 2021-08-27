@@ -92,6 +92,39 @@ def search(problem, callback=None, callback_freq=1_000):
     else:
         return None, None
 
+def iddfs(problem, callback=None, callback_freq=1_000):
+    original_node = Node(problem.initial_state(), 0, None, None)
+    state_count = 0
+
+    def recurse(node, remaining_actions):
+        nonlocal state_count
+        if remaining_actions == 0:
+            state_count = state_count + 1
+            if callback and state_count % callback_freq == 0:
+                callback({ "state": node.state})
+
+            if problem.goal_test(node.state):
+                return True, []
+            else:
+                return False, []
+        
+        new_actions = problem.actions(node)
+        for a in new_actions:
+            child = problem.child(node, a)
+            solved, actions = recurse(child, remaining_actions-1)
+            if solved:
+                return True, [a] + actions
+        return False, []
+
+    max_depth = 0
+    while True:
+        print("Working on depth "+str(max_depth))
+        solved, actions = recurse(original_node, max_depth)
+        if solved:
+            print("Solved at depth "+str(max_depth))
+            return [], [None]+actions # Implement returning states later if needed. Just here to match astar return format.
+        max_depth+=1
+
 if __name__ == "__main__":
     # Example of finding shortest path with heuristic of straight line distance
     @dataclass(eq=True, frozen=True)

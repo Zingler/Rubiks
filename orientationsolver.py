@@ -1,14 +1,20 @@
 from structs import *
 from astar import * 
+from orientationcalc import *
 
-class CubeProblem(Problem):
-    def __init__(self, cube, actions=ACTIONS):
+valid_edge_orientations = calc_edge_orientations(QUARTER_X + QUARTER_Y + HALF_Z)
+
+
+
+class OrientationProblem(Problem):
+    def __init__(self, cube, actions):
         self._initial_state = cube
         self._actions = actions
     def initial_state(self):
         return self._initial_state
     def goal_test(self, state):
-        return state.solved()
+        count = self.wrong_orientation_count(state)
+        return count == 0
     def actions(self, node):
         copy = self._actions[:]
         action = node.action
@@ -18,7 +24,16 @@ class CubeProblem(Problem):
     def apply_action(self, state, action):
         return state.apply(action), 1
     def heuristic(self, state):
-        return state.turn_distance() / 4
+        return self.wrong_orientation_count(state) / 4
+
+    def wrong_orientation_count(self, state):
+        sum = 0
+        for b in state.blocks:
+            o = tuple(b.orientations)
+            if o not in valid_edge_orientations:
+                sum += 1
+        return sum
+
 
 if __name__ == "__main__":
     from plotter import start_plotter
@@ -53,7 +68,7 @@ if __name__ == "__main__":
         y = l.y
         z = l.z
         return ((x == 0) + (y == 0) + (z == 0)) == 2
-    cube = cube.sub_cube(lambda b: True) 
+    cube = cube.sub_cube(lambda b: edge(b)) 
     turns = 30
 
     for i in range(turns):
@@ -67,7 +82,7 @@ if __name__ == "__main__":
 
     # import cProfile
     # with cProfile.Profile() as pr:
-    p = CubeProblem(cube)
+    p = OrientationProblem(cube, ACTIONS)
     states, actions = search(p, callback=callback, callback_freq=10)
     # pr.print_stats()
 
