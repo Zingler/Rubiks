@@ -58,6 +58,8 @@ class Vector:
 
     def __repr__(self) -> str:
         return self.__str__()
+    def __iter__(self):
+        return iter((self.x,self.y,self.z))
 
 
 class Matrix:
