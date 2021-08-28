@@ -1,4 +1,5 @@
 from dataclasses import InitVar, dataclass
+from predicate import Predicate
 from typing import OrderedDict
 
 
@@ -152,7 +153,7 @@ class Block:
 
 
     def __str__(self) -> str:
-        return f'(L=[{self.actual_location.x}, {self.actual_location.y}, {self.actual_location.z}], O=[{self.orientation.x}, {self.orientation.y}, {self.orientation.z}])'
+        return f'(L=[{self.actual_location.x}, {self.actual_location.y}, {self.actual_location.z}], O=[{self.orientations[0].x}, {self.orientations[0].y}, {self.orientations[0].z}])'
 
     def __repr__(self) -> str:
         return self.__str__()
@@ -216,15 +217,16 @@ class Cube:
 class Action:
     _id_generator = 0
 
-    def __init__(self, applies, transform, inverse=None):
+    def __init__(self, applies, axis, transform, inverse=None):
         self.applies = applies
         self.transform = transform
+        self.axis = axis
         if isinstance(inverse, Action):
             self.inverse = inverse
         elif inverse is None:
             self.inverse = self
         else:
-            self.inverse = Action(applies, inverse, self)
+            self.inverse = Action(applies, axis, inverse, self)
 
     def id(self):
         if not hasattr(self, '_id'):
@@ -238,18 +240,62 @@ class Action:
     def __eq__(self, other) -> bool:
         return self.id() == other.id()
 
+def filter_actions(actions, previous_action):
+    if not previous_action:
+        return actions
+
+    new_actions = []
+    for a in actions:
+        if previous_action.inverse == a:
+            continue
+        if previous_action.axis == a.axis and a.id() < previous_action.id():
+            continue
+        new_actions.append(a)
+    return new_actions
+
+@Predicate
+def top(block: Block):
+    l = block.solved_location
+    x = l.x
+    y = l.y
+    z = l.z
+    return z == 1
+
+@Predicate
+def edge(block: Block):
+    l = block.solved_location
+    x = l.x
+    y = l.y
+    z = l.z
+    return (x == 0) ^ (y == 0) ^ (z == 0)
+
+@Predicate
+def corner(block: Block):
+    l = block.solved_location
+    x = l.x
+    y = l.y
+    z = l.z
+    return (x != 0) and (y != 0) and (z != 0)
+
+@Predicate
+def center(block: Block):
+    l = block.solved_location
+    x = l.x
+    y = l.y
+    z = l.z
+    return ((x == 0) + (y == 0) + (z == 0)) == 2
 
 QUARTER_X = [
-    Action(lambda b: b.actual_location.x == 1, Vector.rotateX, Vector.rrotateX),
-    Action(lambda b: b.actual_location.x == -1, Vector.rotateX, Vector.rrotateX),
+    Action(lambda b: b.actual_location.x == 1, "x", Vector.rotateX, Vector.rrotateX),
+    Action(lambda b: b.actual_location.x == -1, "x", Vector.rotateX, Vector.rrotateX),
 ]
 QUARTER_Y = [
-    Action(lambda b: b.actual_location.y == 1, Vector.rotateY, Vector.rrotateY),
-    Action(lambda b: b.actual_location.y == -1, Vector.rotateY, Vector.rrotateY),
+    Action(lambda b: b.actual_location.y == 1, "y", Vector.rotateY, Vector.rrotateY),
+    Action(lambda b: b.actual_location.y == -1, "y", Vector.rotateY, Vector.rrotateY),
 ]
 QUARTER_Z = [
-    Action(lambda b: b.actual_location.z == 1, Vector.rotateZ, Vector.rrotateZ),
-    Action(lambda b: b.actual_location.z == -1, Vector.rotateZ, Vector.rrotateZ),
+    Action(lambda b: b.actual_location.z == 1, "z", Vector.rotateZ, Vector.rrotateZ),
+    Action(lambda b: b.actual_location.z == -1, "z", Vector.rotateZ, Vector.rrotateZ),
 ]
 QUARTER_X = QUARTER_X + list(map(lambda a: a.inverse, QUARTER_X))
 QUARTER_Y = QUARTER_Y + list(map(lambda a: a.inverse, QUARTER_Y))
@@ -258,30 +304,30 @@ QUARTER_Z = QUARTER_Z + list(map(lambda a: a.inverse, QUARTER_Z))
 QUARTER_FACE = QUARTER_X + QUARTER_Y + QUARTER_Z
 
 HALF_X = [
-    Action(lambda b: b.actual_location.x == 1, Vector.halfX),
-    Action(lambda b: b.actual_location.x == -1, Vector.halfX),
+    Action(lambda b: b.actual_location.x == 1, "x", Vector.halfX),
+    Action(lambda b: b.actual_location.x == -1, "x", Vector.halfX),
 ]
 HALF_Y = [
-    Action(lambda b: b.actual_location.y == 1, Vector.halfY),
-    Action(lambda b: b.actual_location.y == -1, Vector.halfY),
+    Action(lambda b: b.actual_location.y == 1, "y", Vector.halfY),
+    Action(lambda b: b.actual_location.y == -1, "y", Vector.halfY),
 ]
 HALF_Z = [
-    Action(lambda b: b.actual_location.z == 1, Vector.halfZ),
-    Action(lambda b: b.actual_location.z == -1, Vector.halfZ),
+    Action(lambda b: b.actual_location.z == 1, "z", Vector.halfZ),
+    Action(lambda b: b.actual_location.z == -1, "z", Vector.halfZ),
 ]
 HALF_FACE = HALF_X + HALF_Y + HALF_Z 
 
 QUARTER_SLICE = [
-    Action(lambda b: abs(b.actual_location.x) == 1, Vector.rotateX, Vector.rrotateX),
-    Action(lambda b: abs(b.actual_location.y) == 1, Vector.rotateY, Vector.rrotateY),
-    Action(lambda b: abs(b.actual_location.z) == 1, Vector.rotateZ, Vector.rrotateZ),
+    Action(lambda b: abs(b.actual_location.x) == 1, "x", Vector.rotateX, Vector.rrotateX),
+    Action(lambda b: abs(b.actual_location.y) == 1, "y", Vector.rotateY, Vector.rrotateY),
+    Action(lambda b: abs(b.actual_location.z) == 1, "z", Vector.rotateZ, Vector.rrotateZ),
 ]
 QUARTER_SLICE = QUARTER_SLICE + list(map(lambda a: a.inverse, QUARTER_SLICE))
 
 HALF_SLICE = [
-    Action(lambda b: abs(b.actual_location.x) == 1, Vector.halfX),
-    Action(lambda b: abs(b.actual_location.y) == 1, Vector.halfY),
-    Action(lambda b: abs(b.actual_location.z) == 1, Vector.halfZ),
+    Action(lambda b: abs(b.actual_location.x) == 1, "x", Vector.halfX),
+    Action(lambda b: abs(b.actual_location.y) == 1, "y", Vector.halfY),
+    Action(lambda b: abs(b.actual_location.z) == 1, "z", Vector.halfZ),
 ]
 
 ACTIONS = QUARTER_FACE + HALF_FACE

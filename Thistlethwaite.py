@@ -13,11 +13,7 @@ class Group2To3Problem(Problem):
         c = self.incorrect_blocks(state)
         return c == 0
     def actions(self, node):
-        copy = self._actions[:]
-        action = node.action
-        if action:
-            copy.remove(node.action.inverse)
-        return copy
+        return filter_actions(self._actions, node.action)
     def apply_action(self, state, action):
         return state.apply(action), 1
     def heuristic(self, state):
@@ -40,11 +36,7 @@ class Group3ToFinalProblem(Problem):
     def goal_test(self, state):
         return state.solved()
     def actions(self, node):
-        copy = self._actions[:]
-        action = node.action
-        if action:
-            copy.remove(node.action.inverse)
-        return copy
+        return filter_actions(self._actions, node.action)
     def apply_action(self, state, action):
         return state.apply(action), 1
     def heuristic(self, state):
@@ -72,7 +64,7 @@ if __name__ == "__main__":
     turns = 200
 
     for i in range(turns):
-        original = original.apply(random.choice(QUARTER_X + HALF_FACE))
+        original = original.apply(random.choice(HALF_FACE))
 
     total_actions = []
 

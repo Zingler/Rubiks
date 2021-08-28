@@ -1,4 +1,4 @@
-from structs import ACTIONS, QUARTER_X, Cube
+from structs import ACTIONS, QUARTER_X, Cube, edge, filter_actions, top
 
 def vector_id(x,y,z):
     return chr((x+1)*9+(y+1)*3+(z+1)+97)
@@ -57,17 +57,17 @@ class PatternDB:
 def build_db(cube:Cube, max_depth, actions=ACTIONS):
     db = PatternDB([b.solved_location for b in cube.blocks])
 
-    def recurse(cube, depth, remaining_actions):
+    def recurse(cube, depth, remaining_actions, previous_action):
         nonlocal actions
         if remaining_actions == 0:
             db.insert_full_cube(cube, depth)
             return
-        for a in actions: # TODO:Performance: filter inverse actions
-            recurse(cube.apply(a), depth, remaining_actions-1)
+        for a in filter_actions(actions, previous_action):
+            recurse(cube.apply(a), depth, remaining_actions-1, a)
     
     for d in range(max_depth):
         print(f"Building DB level {d}")
-        recurse(cube, d, d)
+        recurse(cube, d, d, None)
     return db
 
 if __name__ == "__main__":
@@ -75,16 +75,10 @@ if __name__ == "__main__":
 
 
     cube = Cube(3)
-    cube = cube.sub_cube(lambda b: b.solved_location.x == 1 and b.solved_location.y == 1 and abs(b.solved_location.z) == 1)
+    cube = cube.sub_cube(top & edge)
+    print(cube.blocks)
     db = PatternDB([b.solved_location for b in cube.blocks])
 
-    db.insert_full_cube(cube, 3)
-    cube = cube.apply(QUARTER_X[0])
-    db.insert_full_cube(cube, 4)
-    print(db.db)
-    print(db.get_from_cube(cube))
-
-
-    built_db = build_db(cube, 5)
+    built_db = build_db(cube, 6)
     print("Built db size", len(built_db.db))
 
