@@ -10,11 +10,7 @@ class CubeProblem(Problem):
     def goal_test(self, state):
         return state.solved()
     def actions(self, node):
-        copy = self._actions[:]
-        action = node.action
-        if action:
-            copy.remove(node.action.inverse)
-        return copy
+        return filter_actions(self._actions, node.action)
     def apply_action(self, state, action):
         return state.apply(action), 1
     def heuristic(self, state):
@@ -29,32 +25,8 @@ if __name__ == "__main__":
     render = start_plotter()
 
     cube = Cube(3)
-    def top(block: Block):
-        l = block.solved_location
-        x = l.x
-        y = l.y
-        z = l.z
-        return z == 1
-    def edge(block: Block):
-        l = block.solved_location
-        x = l.x
-        y = l.y
-        z = l.z
-        return (x == 0) ^ (y == 0) ^ (z == 0)
-    def corner(block: Block):
-        l = block.solved_location
-        x = l.x
-        y = l.y
-        z = l.z
-        return (x != 0) and (y != 0) and (z != 0)
-    def center(block: Block):
-        l = block.solved_location
-        x = l.x
-        y = l.y
-        z = l.z
-        return ((x == 0) + (y == 0) + (z == 0)) == 2
     cube = cube.sub_cube(lambda b: True) 
-    turns = 30
+    turns = 8
 
     for i in range(turns):
         cube = cube.apply(random.choice(ACTIONS))
@@ -68,7 +40,7 @@ if __name__ == "__main__":
     # import cProfile
     # with cProfile.Profile() as pr:
     p = CubeProblem(cube)
-    states, actions = search(p, callback=callback, callback_freq=10)
+    states, actions = search(p, callback=callback, callback_freq=100)
     # pr.print_stats()
 
 

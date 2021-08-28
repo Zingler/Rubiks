@@ -44,7 +44,7 @@ class Group3ToFinalProblem(Problem):
         corner_cube = model_cube.sub_cube(corner)
         self._dbs = [build_db("finaledge", edge_cube, 9, HALF_FACE),
                      build_db("finalcorner", corner_cube, 9, HALF_FACE),
-                     build_db("finalfull", model_cube, 7, HALF_FACE)]
+                     build_db("finalfull", model_cube, 8, HALF_FACE)]
 
     def initial_state(self):
         return self._initial_state

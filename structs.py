@@ -246,6 +246,8 @@ def filter_actions(actions, previous_action):
 
     new_actions = []
     for a in actions:
+        if a == previous_action:
+            continue
         if previous_action.inverse == a:
             continue
         if previous_action.axis == a.axis and a.id() < previous_action.id():

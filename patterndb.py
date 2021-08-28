@@ -13,11 +13,25 @@ def position_from_id(id_string):
     x = id%3 - 1
     return [x,y,z]
 
+class PatternDBData:
+    pass
+
+
 class PatternDB:
-    def __init__(self, solved_positions, default):
-        self.solved_positions = solved_positions
-        self.db = {}
-        self.default = default
+    def __init__(self, ordered_positions=[], default_value=0, match_on_solved_location=True, data=None):
+        if data:
+            self.data = data
+        else:
+            self.data = PatternDBData()
+            self.data.ordered_positions = ordered_positions
+            self.data.db = {}
+            self.data.default_value = default_value
+            self.data.matching_on_solved_location = match_on_solved_location
+
+        if self.data.matching_on_solved_location:
+            self.matcher = lambda p: lambda b: b.solved_location == p
+        else:
+            self.matcher = lambda p: lambda b: b.actual_location == p
     
     def create_key(self, blocks):
         array = [vector_id(*b.actual_location) for b in blocks] + [vector_id(*o) for b in blocks for o in b.orientations]
@@ -25,11 +39,13 @@ class PatternDB:
     
     def insert_if_not_present(self, blocks, value):
         key = self.create_key(blocks)
-        if key not in self.db:
-            self.db[key] = value
+        if key not in self.data.db:
+            self.data.db[key] = value
+            return True
+        return False
     
     def insert_full_cube(self, cube:Cube, value):
-        self.insert_if_not_present(cube.blocks, value)
+        return self.insert_if_not_present(cube.blocks, value)
     
     def matching_blocks_from_cube(self, cube:Cube):
         def find(l, lamb):
@@ -40,8 +56,8 @@ class PatternDB:
 
         blocks = cube.blocks
         result = []
-        for p in self.solved_positions:
-            block = find(blocks, lambda x: x.solved_location == p)
+        for p in self.data.ordered_positions:
+            block = find(blocks, self.matcher(p))
             result.append(block)
         return result
     
@@ -51,34 +67,39 @@ class PatternDB:
 
     def get(self, blocks):
         key = self.create_key(blocks)
-        if key in self.db:
-            return self.db[key]
+        if key in self.data.db:
+            return self.data.db[key]
         else:
-            return self.default
+            return self.data.default_value
 
 def build_db(name, cube:Cube, max_depth, actions=ACTIONS):
     filepath = f"dbs/{name}.db"
     try:
-        file_db = pickle.load(open(filepath, "rb"))
-        return file_db
+        db_data = pickle.load(open(filepath, "rb"))
+        return PatternDB(data=db_data)
     except:
         pass
     
-    db = PatternDB([b.solved_location for b in cube.blocks], default=max_depth+1)
+    db = PatternDB(ordered_positions=[b.solved_location for b in cube.blocks], default_value=max_depth+1)
 
     def recurse(cube, depth, remaining_actions, previous_action):
         nonlocal actions
         if remaining_actions == 0:
-            db.insert_full_cube(cube, depth)
-            return
+            return db.insert_full_cube(cube, depth)
+        inserted_something = False
         for a in filter_actions(actions, previous_action):
-            recurse(cube.apply(a), depth, remaining_actions-1, a)
+            did_insert = recurse(cube.apply(a), depth, remaining_actions-1, a)
+            inserted_something |= did_insert
+        return inserted_something
     
     for d in range(max_depth):
-        print(f"Building DB level {d}")
-        recurse(cube, d, d, None)
-    print(f"Built db with {len(db.db)} elements. Saving to disk.")
-    pickle.dump(db, open(filepath, "wb"))
+        print(f"[{name}]: Building DB level {d}")
+        inserted_something = recurse(cube, d, d, None)
+        if not inserted_something:
+            print("Halting before max depth as all states had be found already")
+            break;
+    print(f"[{name}]: Built db with {len(db.data.db)} elements. Saving to disk.")
+    pickle.dump(db.data, open(filepath, "wb"))
     return db
 
 if __name__ == "__main__":
@@ -87,5 +108,5 @@ if __name__ == "__main__":
     cube = cube.sub_cube(top & edge)
 
     built_db = build_db("test", cube, 4)
-    print("db size", len(built_db.db))
+    print("db size", len(built_db.data.db))
 
