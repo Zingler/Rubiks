@@ -1,17 +1,34 @@
 from structs import ACTIONS, QUARTER_X, Cube, edge, filter_actions, top
 import pickle
 
-def vector_id(x,y,z):
+
+def vector_id(x, y, z):
     return chr((x+1)*9+(y+1)*3+(z+1)+97)
+
+
+def orientation_id(os):
+    one = one_hot_cold_encoding(*os[0])
+    two = one_hot_cold_encoding(*os[1])
+    return chr(one*6+two+97)
+
+encoding = [
+    [[0, 0, 0], [0, 0, 0], [0, 0, 0]],
+    [[2, 2, 2], [4, None, 5], [3, 3, 3]],
+    [[1, 1, 1], [1, 1, 1], [1, 1, 1]],
+]
+def one_hot_cold_encoding(x, y, z):
+    return encoding[x+1][y+1][z+1]
+
 
 def position_from_id(id_string):
     id = ord(id_string) - 97
-    z = id%3 - 1
+    z = id % 3 - 1
     id //= 3
-    y = id%3 - 1
+    y = id % 3 - 1
     id //= 3
-    x = id%3 - 1
-    return [x,y,z]
+    x = id % 3 - 1
+    return [x, y, z]
+
 
 class PatternDBData:
     pass
@@ -32,22 +49,22 @@ class PatternDB:
             self.matcher = lambda p: lambda b: b.solved_location == p
         else:
             self.matcher = lambda p: lambda b: b.actual_location == p
-    
+
     def create_key(self, blocks):
-        array = [vector_id(*b.actual_location) for b in blocks] + [vector_id(*o) for b in blocks for o in b.orientations]
+        array = [vector_id(*b.actual_location) for b in blocks] + [orientation_id(b.orientations) for b in blocks]
         return ''.join(array)
-    
+
     def insert_if_not_present(self, blocks, value):
         key = self.create_key(blocks)
         if key not in self.data.db:
             self.data.db[key] = value
             return True
         return False
-    
-    def insert_full_cube(self, cube:Cube, value):
+
+    def insert_full_cube(self, cube: Cube, value):
         return self.insert_if_not_present(cube.blocks, value)
-    
-    def matching_blocks_from_cube(self, cube:Cube):
+
+    def matching_blocks_from_cube(self, cube: Cube):
         def find(l, lamb):
             for x in l:
                 if lamb(x):
@@ -60,8 +77,8 @@ class PatternDB:
             block = find(blocks, self.matcher(p))
             result.append(block)
         return result
-    
-    def get_from_cube(self, cube:Cube):
+
+    def get_from_cube(self, cube: Cube):
         blocks = self.matching_blocks_from_cube(cube)
         return self.get(blocks)
 
@@ -72,14 +89,15 @@ class PatternDB:
         else:
             return self.data.default_value
 
-def build_db(name, cube:Cube, max_depth, actions=ACTIONS):
+
+def build_db(name, cube: Cube, max_depth, actions=ACTIONS):
     filepath = f"dbs/{name}.db"
     try:
         db_data = pickle.load(open(filepath, "rb"))
         return PatternDB(data=db_data)
     except:
         pass
-    
+
     db = PatternDB(ordered_positions=[b.solved_location for b in cube.blocks], default_value=max_depth+1)
 
     def recurse(cube, depth, remaining_actions, previous_action):
@@ -91,16 +109,17 @@ def build_db(name, cube:Cube, max_depth, actions=ACTIONS):
             did_insert = recurse(cube.apply(a), depth, remaining_actions-1, a)
             inserted_something |= did_insert
         return inserted_something
-    
+
     for d in range(max_depth):
         print(f"[{name}]: Building DB level {d}")
         inserted_something = recurse(cube, d, d, None)
         if not inserted_something:
             print("Halting before max depth as all states had be found already")
-            break;
+            break
     print(f"[{name}]: Built db with {len(db.data.db)} elements. Saving to disk.")
     pickle.dump(db.data, open(filepath, "wb"))
     return db
+
 
 if __name__ == "__main__":
     from structs import Vector
@@ -109,4 +128,3 @@ if __name__ == "__main__":
 
     built_db = build_db("test", cube, 4)
     print("db size", len(built_db.data.db))
-
