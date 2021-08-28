@@ -1,4 +1,5 @@
 from structs import ACTIONS, QUARTER_X, Cube, edge, filter_actions, top
+import pickle
 
 def vector_id(x,y,z):
     return chr((x+1)*9+(y+1)*3+(z+1)+97)
@@ -55,7 +56,14 @@ class PatternDB:
         else:
             return self.default
 
-def build_db(cube:Cube, max_depth, actions=ACTIONS):
+def build_db(name, cube:Cube, max_depth, actions=ACTIONS):
+    filepath = f"dbs/{name}.db"
+    try:
+        file_db = pickle.load(open(filepath, "rb"))
+        return file_db
+    except:
+        pass
+    
     db = PatternDB([b.solved_location for b in cube.blocks], default=max_depth+1)
 
     def recurse(cube, depth, remaining_actions, previous_action):
@@ -69,18 +77,15 @@ def build_db(cube:Cube, max_depth, actions=ACTIONS):
     for d in range(max_depth):
         print(f"Building DB level {d}")
         recurse(cube, d, d, None)
-    print(f"Built db with {len(db.db)} elements")
+    print(f"Built db with {len(db.db)} elements. Saving to disk.")
+    pickle.dump(db, open(filepath, "wb"))
     return db
 
 if __name__ == "__main__":
     from structs import Vector
-
-
     cube = Cube(3)
     cube = cube.sub_cube(top & edge)
-    print(cube.blocks)
-    db = PatternDB([b.solved_location for b in cube.blocks])
 
-    built_db = build_db(cube, 6)
-    print("Built db size", len(built_db.db))
+    built_db = build_db("test", cube, 4)
+    print("db size", len(built_db.db))
 

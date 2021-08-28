@@ -42,7 +42,9 @@ class Group3ToFinalProblem(Problem):
         model_cube = Cube(3).sub_cube(lambda b: b.solved_location.x == 1 or b.solved_location.y == 1 or b.solved_location.z == 1)
         edge_cube = model_cube.sub_cube(edge)
         corner_cube = model_cube.sub_cube(corner)
-        self._dbs = [build_db(edge_cube, 9, HALF_FACE), build_db(corner_cube, 9, HALF_FACE), build_db(model_cube, 7, HALF_FACE)]
+        self._dbs = [build_db("finaledge", edge_cube, 9, HALF_FACE),
+                     build_db("finalcorner", corner_cube, 9, HALF_FACE),
+                     build_db("finalfull", model_cube, 7, HALF_FACE)]
 
     def initial_state(self):
         return self._initial_state
