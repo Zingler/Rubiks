@@ -13,9 +13,10 @@ def position_from_id(id_string):
     return [x,y,z]
 
 class PatternDB:
-    def __init__(self, solved_positions):
+    def __init__(self, solved_positions, default):
         self.solved_positions = solved_positions
         self.db = {}
+        self.default = default
     
     def create_key(self, blocks):
         array = [vector_id(*b.actual_location) for b in blocks] + [vector_id(*o) for b in blocks for o in b.orientations]
@@ -52,10 +53,10 @@ class PatternDB:
         if key in self.db:
             return self.db[key]
         else:
-            return None
+            return self.default
 
 def build_db(cube:Cube, max_depth, actions=ACTIONS):
-    db = PatternDB([b.solved_location for b in cube.blocks])
+    db = PatternDB([b.solved_location for b in cube.blocks], default=max_depth+1)
 
     def recurse(cube, depth, remaining_actions, previous_action):
         nonlocal actions
@@ -68,6 +69,7 @@ def build_db(cube:Cube, max_depth, actions=ACTIONS):
     for d in range(max_depth):
         print(f"Building DB level {d}")
         recurse(cube, d, d, None)
+    print(f"Built db with {len(db.db)} elements")
     return db
 
 if __name__ == "__main__":
