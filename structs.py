@@ -200,6 +200,10 @@ class Cube:
         decor = [b for b in self.decorative_blocks if block_selector(b)]
         return Cube(self.size, blocks, decorative_blocks = decor) 
 
+    def sub_cube_from_cube(self, cube):
+        solved_positions = set((s.solved_location for s in cube.blocks))
+        return self.sub_cube(lambda c: c.solved_location in solved_positions)
+
     def solved(self):
         return all((b.solved() for b in self.blocks))
 

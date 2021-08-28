@@ -27,10 +27,14 @@ def calc_corner_orientations(actions):
 
 
 if __name__ == "__main__":
-    actions = QUARTER_X + QUARTER_Y + HALF_Z
+    actions = HALF_FACE
     os = calc_edge_orientations(actions)
-    print(os)
+    print(len(os))
 
-    actions = QUARTER_X + HALF_Y + HALF_Z
-    os = calc_corner_orientations(actions)
-    print(os)
+    # actions = QUARTER_X + QUARTER_Y + HALF_Z
+    # os = calc_edge_orientations(actions)
+    # print(os)
+
+    # actions = QUARTER_X + HALF_Y + HALF_Z
+    # os = calc_corner_orientations(actions)
+    # print(os)

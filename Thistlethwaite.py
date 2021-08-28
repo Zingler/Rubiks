@@ -1,4 +1,4 @@
-from patterndb import build_db
+from patterndb import CornerOrientationAxisKeyGenerator, EdgeSliceKeyGen, OrientationKeyGenerator, build_db, corner_perm_db
 from structs import *
 from astar import *
 from orientationcalc import calc_corner_orientations
@@ -9,13 +9,27 @@ class Group2To3Problem(Problem):
     def __init__(self, cube):
         self._initial_state = cube
         self._actions = QUARTER_X + HALF_FACE
+        model_cube = Cube(3)
+        edge_cube = model_cube.sub_cube(edge)
+        corner_cube = model_cube.sub_cube(corner)
+        self._dbs = [
+            build_db("2to3EdgeSlice", edge_cube, 9, QUARTER_X + HALF_FACE, pattern_db_options={
+            "match_on_solved_location": False,
+            "key_generators": [EdgeSliceKeyGen]
+        }),
+            build_db("CornerOrientationAxis", corner_cube, 6, QUARTER_X + HALF_FACE, pattern_db_options={
+            "match_on_solved_location": False,
+            "key_generators": [OrientationKeyGenerator]
+        }),
+        ]
+        self.corner_perm_db = corner_perm_db()
 
     def initial_state(self):
         return self._initial_state
 
     def goal_test(self, state):
         c = self.incorrect_blocks(state)
-        return c == 0
+        return c == 0 and self.corner_perm_db.contains_cube(state)
 
     def actions(self, node):
         return filter_actions(self._actions, node.action)
@@ -24,14 +38,18 @@ class Group2To3Problem(Problem):
         return state.apply(action), 1
 
     def heuristic(self, state):
-        return self.incorrect_blocks(state) / 8
+        db_lookup = max([db.get_from_cube(state) for db in self._dbs])
+        value = max(self.incorrect_blocks(state) / 8, db_lookup)
+        if value == 0:
+            value = max(value, 1-int(self.corner_perm_db.contains_cube(state)))
+        return value
 
     def incorrect_blocks(self, state):
         c = 0
         for b in state.blocks:
             orbit = b.correct_orbit() and b.correct_slice()
-            corner_o = not b.is_corner() or abs(b.orientations[0].x) == 1
-            c += not corner_o or not orbit
+            orientations = abs(b.orientations[0].x) == 1
+            c += not orientations or not orbit
         return c
 
 
@@ -39,7 +57,7 @@ class Group3ToFinalProblem(Problem):
     def __init__(self, cube):
         self._initial_state = cube
         self._actions = HALF_FACE
-        model_cube = Cube(3).sub_cube(lambda b: b.solved_location.x == 1 or b.solved_location.y == 1 or b.solved_location.z == 1)
+        model_cube = Cube(3).sub_cube_from_cube(cube)
         edge_cube = model_cube.sub_cube(edge)
         corner_cube = model_cube.sub_cube(corner)
         self._dbs = [build_db("finaledge", edge_cube, 9, HALF_FACE),
@@ -77,7 +95,8 @@ if __name__ == "__main__":
     turns = 200
 
     for i in range(turns):
-        original = original.apply(random.choice(HALF_FACE))
+        original = original.apply(random.choice(QUARTER_X + HALF_FACE))
+        # original = original.apply(random.choice(HALF_FACE))
 
     total_actions = []
 

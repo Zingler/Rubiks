@@ -1,5 +1,5 @@
 from orientationcalc import calc_edge_orientations
-from structs import ACTIONS, HALF_Z, QUARTER_X, QUARTER_Y, Cube, center, edge, filter_actions, top
+from structs import ACTIONS, HALF_FACE, HALF_Z, QUARTER_X, QUARTER_Y, Cube, center, corner, edge, filter_actions, top
 import pickle
 
 
@@ -51,6 +51,16 @@ class OrientationKeyGenerator(KeyGenerator):
     def block_key(self, block):
         return orientation_id(block.orientations)
 
+class CornerOrientationAxisKeyGenerator(KeyGenerator):
+    def key(self, blocks):
+        result = ''
+        for i in range(0, len(blocks), 5):
+            num = 0
+            for b in blocks[i:i+5]:
+                num *= 3
+                num += [abs(m) for m in b.orientations[0]].index(1)
+            result += chr(num+97)
+        return result
 
 class EdgeOrientationKeyGen:
     def __init__(self) -> None:
@@ -67,12 +77,32 @@ class EdgeOrientationKeyGen:
         return result
 
 
+class EdgeSliceKeyGen:
+    def slice_num(self, b):
+        slice_array = [m == 0 for m in b.solved_location]
+        return slice_array.index(True)
+
+    def key(self, blocks):
+        result = ''
+        for i in range(0, len(blocks), 5):
+            num = 0
+            for b in blocks[i:i+5]:
+                num *= 3
+                num += self.slice_num(b)
+            result += chr(num+97)
+        return result
+
+
 class PatternDBData:
     pass
 
 
 class PatternDB:
-    def __init__(self, ordered_positions=[], default_value=0, match_on_solved_location=True, key_generators=[ActualLocationKeyGenerator, OrientationKeyGenerator], data=None):
+    def __init__(self, ordered_positions=[],
+                 default_value=0,
+                 match_on_solved_location=True,
+                 key_generators=[ActualLocationKeyGenerator, OrientationKeyGenerator],
+                 data=None):
         if data:
             self.data = data
         else:
@@ -90,6 +120,8 @@ class PatternDB:
         self.key_generators = [c() for c in self.data.key_generator_classes]
 
     def create_key(self, blocks):
+        if not self.data.matching_on_solved_location:  # Reorder blocks based on actual location
+            blocks = self.matching_blocks(blocks)
         array = [gen.key(blocks) for gen in self.key_generators]
         return ''.join(array)
 
@@ -103,19 +135,20 @@ class PatternDB:
     def insert_full_cube(self, cube: Cube, value):
         return self.insert_if_not_present(cube.blocks, value)
 
-    def matching_blocks_from_cube(self, cube: Cube):
+    def matching_blocks(self, blocks):
         def find(l, lamb):
             for x in l:
                 if lamb(x):
                     return x
             return None
-
-        blocks = cube.blocks
         result = []
         for p in self.data.ordered_positions:
             block = find(blocks, self.matcher(p))
             result.append(block)
         return result
+
+    def matching_blocks_from_cube(self, cube: Cube):
+        return self.matching_blocks(cube.blocks)
 
     def get_from_cube(self, cube: Cube):
         blocks = self.matching_blocks_from_cube(cube)
@@ -127,6 +160,17 @@ class PatternDB:
             return self.data.db[key]
         else:
             return self.data.default_value
+
+    def contains_cube(self, cube):
+        blocks = self.matching_blocks_from_cube(cube)
+        return self.create_key(blocks) in self.data.db
+
+
+def corner_perm_db():
+    cube = Cube(3).sub_cube(corner)
+    return build_db("corner_perm", cube, 10, actions=HALF_FACE, pattern_db_options={
+        "key_generators": [ActualLocationKeyGenerator]
+    })
 
 
 def build_db(name, cube: Cube, max_depth, actions=ACTIONS, pattern_db_options={}):
@@ -154,7 +198,7 @@ def build_db(name, cube: Cube, max_depth, actions=ACTIONS, pattern_db_options={}
         print(f"[{name}]: Building DB level {d}")
         inserted_something = recurse(cube, d, d, None)
         if not inserted_something:
-            print("Halting before max depth as all states had be found already")
+            print("Halting before max depth as all states have be found already")
             break
     print(f"[{name}]: Built db with {len(db.data.db)} elements. Saving to disk.")
     pickle.dump(db.data, open(filepath, "wb"))
