@@ -168,7 +168,7 @@ class Block:
 
 
 class Cube:
-    def __init__(self, size, blocks=None):
+    def __init__(self, size, blocks=None, decorative_blocks=[]):
         self.size = size
         if blocks == None:
             self.blocks = []
@@ -180,20 +180,25 @@ class Cube:
                         interior = all([abs(x) != half for x in (i, j, k)])
                         if not (even and i*j*k == 0) and not interior:
                             self.blocks.append(Block(Vector(i, j, k)))
+            self.decorative_blocks = [b for b in self.blocks if center(b)]
+            self.blocks = [b for b in self.blocks if not center(b)]
         else:
             self.blocks = blocks
+            self.decorative_blocks = decorative_blocks
         self._hash = None
 
     def apply(self, action):
         blocks = [b.apply(action) for b in self.blocks]
-        return Cube(self.size, blocks=blocks)
+        return Cube(self.size, blocks=blocks, decorative_blocks=self.decorative_blocks)
 
     def sub_cube(self, block_selector):
         blocks = []
         for b in self.blocks:
             if block_selector(b):
                 blocks.append(b)
-        return Cube(self.size, blocks)
+        blocks = [b for b in self.blocks if block_selector(b)]
+        decor = [b for b in self.decorative_blocks if block_selector(b)]
+        return Cube(self.size, blocks, decorative_blocks = decor) 
 
     def solved(self):
         return all((b.solved() for b in self.blocks))

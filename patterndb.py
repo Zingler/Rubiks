@@ -1,4 +1,5 @@
-from structs import ACTIONS, QUARTER_X, Cube, edge, filter_actions, top
+from orientationcalc import calc_edge_orientations
+from structs import ACTIONS, HALF_Z, QUARTER_X, QUARTER_Y, Cube, center, edge, filter_actions, top
 import pickle
 
 
@@ -11,11 +12,14 @@ def orientation_id(os):
     two = one_hot_cold_encoding(*os[1])
     return chr(one*6+two+97)
 
+
 encoding = [
     [[0, 0, 0], [0, 0, 0], [0, 0, 0]],
     [[2, 2, 2], [4, None, 5], [3, 3, 3]],
     [[1, 1, 1], [1, 1, 1], [1, 1, 1]],
 ]
+
+
 def one_hot_cold_encoding(x, y, z):
     return encoding[x+1][y+1][z+1]
 
@@ -30,12 +34,45 @@ def position_from_id(id_string):
     return [x, y, z]
 
 
+class KeyGenerator:
+    def key(self, blocks):
+        return "".join(self.block_key(b) for b in blocks)
+
+    def block_key(self, block):
+        pass
+
+
+class ActualLocationKeyGenerator(KeyGenerator):
+    def block_key(self, block):
+        return vector_id(*block.actual_location)
+
+
+class OrientationKeyGenerator(KeyGenerator):
+    def block_key(self, block):
+        return orientation_id(block.orientations)
+
+
+class EdgeOrientationKeyGen:
+    def __init__(self) -> None:
+        self.valid_orientations = calc_edge_orientations(QUARTER_X+QUARTER_Y+HALF_Z)
+
+    def key(self, blocks):
+        result = ''
+        for i in range(0, len(blocks), 5):
+            num = 0
+            for b in blocks[i:i+5]:
+                num <<= 1
+                num += tuple(b.orientations) in self.valid_orientations
+            result += chr(num+97)
+        return result
+
+
 class PatternDBData:
     pass
 
 
 class PatternDB:
-    def __init__(self, ordered_positions=[], default_value=0, match_on_solved_location=True, data=None):
+    def __init__(self, ordered_positions=[], default_value=0, match_on_solved_location=True, key_generators=[ActualLocationKeyGenerator, OrientationKeyGenerator], data=None):
         if data:
             self.data = data
         else:
@@ -44,14 +81,16 @@ class PatternDB:
             self.data.db = {}
             self.data.default_value = default_value
             self.data.matching_on_solved_location = match_on_solved_location
+            self.data.key_generator_classes = key_generators
 
         if self.data.matching_on_solved_location:
             self.matcher = lambda p: lambda b: b.solved_location == p
         else:
             self.matcher = lambda p: lambda b: b.actual_location == p
+        self.key_generators = [c() for c in self.data.key_generator_classes]
 
     def create_key(self, blocks):
-        array = [vector_id(*b.actual_location) for b in blocks] + [orientation_id(b.orientations) for b in blocks]
+        array = [gen.key(blocks) for gen in self.key_generators]
         return ''.join(array)
 
     def insert_if_not_present(self, blocks, value):
@@ -90,7 +129,8 @@ class PatternDB:
             return self.data.default_value
 
 
-def build_db(name, cube: Cube, max_depth, actions=ACTIONS):
+def build_db(name, cube: Cube, max_depth, actions=ACTIONS, pattern_db_options={}):
+    cube = cube.sub_cube(~center)
     filepath = f"dbs/{name}.db"
     try:
         db_data = pickle.load(open(filepath, "rb"))
@@ -98,7 +138,7 @@ def build_db(name, cube: Cube, max_depth, actions=ACTIONS):
     except:
         pass
 
-    db = PatternDB(ordered_positions=[b.solved_location for b in cube.blocks], default_value=max_depth+1)
+    db = PatternDB(ordered_positions=[b.solved_location for b in cube.blocks], default_value=max_depth+1, **pattern_db_options)
 
     def recurse(cube, depth, remaining_actions, previous_action):
         nonlocal actions
@@ -128,3 +168,9 @@ if __name__ == "__main__":
 
     built_db = build_db("test", cube, 4)
     print("db size", len(built_db.data.db))
+
+    edge_cube = Cube(3).sub_cube(edge)
+    build_db("edgetest", edge_cube, 6, pattern_db_options={
+        "match_on_solved_location": False,
+        "key_generators": [EdgeOrientationKeyGen]
+    })

@@ -72,6 +72,8 @@ def PlotProcess(cube_queue):
         ax.collections = []
         for b in cube.blocks:
             ax.add_collection3d(block_to_3dcollection(b, size))
+        for b in cube.decorative_blocks:
+            ax.add_collection3d(block_to_3dcollection(b, size))
         plt.draw()
 
     timer = fig.canvas.new_timer(interval=200)

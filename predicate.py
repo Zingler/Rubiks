@@ -7,4 +7,6 @@ class Predicate:
         return Predicate(lambda *args, **kwds: self(*args, **kwds) or other(*args, **kwds))
     def __and__(self, other):
         return Predicate(lambda *args, **kwds: self(*args, **kwds) and other(*args, **kwds))
+    def __invert__(self):
+        return Predicate(lambda *args, **kwds: not self(*args, **kwds))
 
