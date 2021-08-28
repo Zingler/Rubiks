@@ -48,8 +48,7 @@ class Group2To3Problem(Problem):
         c = 0
         for b in state.blocks:
             orbit = b.correct_orbit() and b.correct_slice()
-            orientations = abs(b.orientations[0].x) == 1
-            c += not orientations or not orbit
+            c += not orbit
         return c
 
 
