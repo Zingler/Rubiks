@@ -272,6 +272,12 @@ def top(block: Block):
     z = l.z
     return z == 1
 
+def solved(attrib, val):
+    @Predicate
+    def f(block: Block):
+        return block.solved_location.__getattribute__(attrib) == val
+    return f
+
 @Predicate
 def edge(block: Block):
     l = block.solved_location
