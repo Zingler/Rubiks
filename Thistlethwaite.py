@@ -29,7 +29,7 @@ class Group0To1Problem(Problem):
     def incorrect_blocks(self, state):
         c = 0
         for b in state.blocks:
-            c += tuple(b.orientations) not in self.correct_orientations
+            c += tuple(b.orientations) not in self.correct_orientations[b.solved_location]
         return c
 
 class Group1To2Problem(Problem):
