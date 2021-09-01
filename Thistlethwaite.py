@@ -1,4 +1,4 @@
-from patterndb import CornerOrientationAxisKeyGenerator, EdgeSliceKeyGen, OrientationKeyGenerator, build_db, corner_perm_db
+from patterndb import ActualLocationKeyGenerator, CornerOrientationAxisKeyGenerator, EdgeOrientationKeyGen, EdgeSliceKeyGen, OrientationKeyGenerator, build_db, corner_perm_db
 from structs import *
 from astar import *
 from orientationcalc import calc_corner_orientations, calc_edge_orientations
@@ -9,6 +9,12 @@ class Group0To1Problem(Problem):
         self._initial_state = cube
         self._actions = QUARTER_FACE + HALF_FACE
         self.correct_orientations = calc_edge_orientations(QUARTER_X+QUARTER_Y+HALF_FACE)
+        self._dbs = [
+            build_db("OrientationEdge", Cube(3).sub_cube(edge), 6, QUARTER_X+QUARTER_Y+QUARTER_Z, pattern_db_options={
+            "match_on_solved_location": False,
+            "key_generators": [EdgeOrientationKeyGen]
+        }),
+        ]
 
     def initial_state(self):
         return self._initial_state
@@ -24,7 +30,8 @@ class Group0To1Problem(Problem):
         return state.apply(action), 1
 
     def heuristic(self, state):
-        return self.incorrect_blocks(state) / 4
+        db_lookup = max([db.get_from_cube(state) for db in self._dbs])
+        return max(self.incorrect_blocks(state) / 4, db_lookup)
 
     def incorrect_blocks(self, state):
         c = 0
@@ -38,10 +45,14 @@ class Group1To2Problem(Problem):
         self._actions = QUARTER_X + QUARTER_Y + HALF_FACE
         model_cube = Cube(3)
         corner_cube = model_cube.sub_cube(corner)
+        one_slice_edge_cube = model_cube.sub_cube(edge & solved('x', 0))
         self._dbs = [
             build_db("orientateaxiscorner", corner_cube, 6, QUARTER_X + QUARTER_Y + HALF_FACE, pattern_db_options={
             "match_on_solved_location": False,
             "key_generators": [CornerOrientationAxisKeyGenerator]
+        }),
+            build_db("oneslicewithpermutations", one_slice_edge_cube, 6, QUARTER_X + QUARTER_Y + HALF_FACE, insert_all_permutations=True, pattern_db_options={
+            "key_generators": [ActualLocationKeyGenerator]
         }),
         ]
 

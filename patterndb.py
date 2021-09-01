@@ -1,3 +1,4 @@
+from permutation import permutations
 from orientationcalc import calc_edge_orientations
 from structs import ACTIONS, HALF_FACE, HALF_Z, QUARTER_X, QUARTER_Y, Cube, center, corner, edge, filter_actions, top
 import pickle
@@ -72,7 +73,7 @@ class EdgeOrientationKeyGen:
             num = 0
             for b in blocks[i:i+5]:
                 num <<= 1
-                num += tuple(b.orientations) in self.valid_orientations
+                num += tuple(b.orientations) in self.valid_orientations[b.solved_location]
             result += chr(num+97)
         return result
 
@@ -135,6 +136,13 @@ class PatternDB:
     def insert_full_cube(self, cube: Cube, value):
         return self.insert_if_not_present(cube.blocks, value)
 
+    def insert_cube_with_permutations(self, cube: Cube, value):
+        blocks = cube.blocks
+        inserted_anything = False
+        for p in permutations(blocks):
+            inserted_anything |= self.insert_if_not_present(p, value)
+        return inserted_anything
+
     def matching_blocks(self, blocks):
         def find(l, lamb):
             for x in l:
@@ -173,7 +181,7 @@ def corner_perm_db():
     })
 
 
-def build_db(name, cube: Cube, max_depth, actions=ACTIONS, pattern_db_options={}):
+def build_db(name, cube: Cube, max_depth, actions=ACTIONS, insert_all_permutations=False, pattern_db_options={}):
     cube = cube.sub_cube(~center)
     filepath = f"dbs/{name}.db"
     try:
@@ -187,7 +195,10 @@ def build_db(name, cube: Cube, max_depth, actions=ACTIONS, pattern_db_options={}
     def recurse(cube, depth, remaining_actions, previous_action):
         nonlocal actions
         if remaining_actions == 0:
-            return db.insert_full_cube(cube, depth)
+            if insert_all_permutations:
+                return db.insert_cube_with_permutations(cube, depth)
+            else:
+                return db.insert_full_cube(cube, depth)
         inserted_something = False
         for a in filter_actions(actions, previous_action):
             did_insert = recurse(cube.apply(a), depth, remaining_actions-1, a)
